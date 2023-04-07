@@ -1,12 +1,7 @@
 #include <assert.h>
 #include "MkString.h"
 
-MkString_MemAlloc_Cb MkString_MemAlloc;
-MkString_MemRealloc_Cb MkString_MemRealloc;
-MkString_MemFree_Cb MkString_MemFree;
-MkString_MemCopy_Cb MkString_MemCopy;
-
-MkStringW * MkStringW_CopyC(const wchar_t * cstring)
+MkStringW * MkStringW_Copy_C(const wchar_t * cstring)
 {
     assert(MkString_MemAlloc);
     assert(MkString_MemRealloc);
@@ -62,7 +57,7 @@ MkStringW * MkStringW_Copy(const MkStringW * string)
     return copy;
 }
 
-MkStringW * MkStringW_ConcatC(const wchar_t * cstringA, const wchar_t * cstringB)
+MkStringW * MkStringW_Concat_C(const wchar_t * cstringA, const wchar_t * cstringB)
 {
     assert(MkString_MemAlloc);
     assert(MkString_MemRealloc);
@@ -109,7 +104,7 @@ void MkStringW_Destroy(MkStringW * string)
     MkString_MemFree(string);
 }
 
-int MkStringW_AppendC(MkStringW * dest, const wchar_t * source)
+int MkStringW_Append_C(MkStringW * dest, const wchar_t * source)
 {
     assert(MkString_MemAlloc);
     assert(MkString_MemRealloc);
@@ -135,7 +130,7 @@ int MkStringW_AppendC(MkStringW * dest, const wchar_t * source)
     return 1;
 }
 
-int MkStringW_AppendWin32PathC(MkStringW * win32Path, const wchar_t * element)
+int MkStringW_AppendWin32Path_C(MkStringW * win32Path, const wchar_t * element)
 {
     assert(MkString_MemAlloc);
     assert(MkString_MemRealloc);
