@@ -2,8 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="MkString.c" />
+    <ClCompile Include="MkDynArray.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MkString.h" />
+    <ClInclude Include="MkDynArray.h" />
   </ItemGroup>
 </Project>

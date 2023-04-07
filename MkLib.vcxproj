@@ -19,9 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MkDynArray.c" />
     <ClCompile Include="MkString.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MkDynArray.h" />
     <ClInclude Include="MkString.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

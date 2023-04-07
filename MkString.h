@@ -1,12 +1,11 @@
 /*
-This library provides safe string types and additional useful string functionality.
+Safe string types and additional useful string functionality.
 
 Usage:
 - You must define and set pointers to memory management functions.
 - None of the functions accept NULL pointers, except where explicitly stated.
 - Assertions are used to check input parameters.
 */
-
 
 //----------------
 // DEFINITIONS
@@ -40,7 +39,6 @@ extern "C"
 {
 #endif
 
-
     //-------------------
     // MEMORY MANAGEMENT
 
@@ -48,7 +46,6 @@ extern "C"
     extern MkString_MemRealloc_Cb MkString_MemRealloc;
     extern MkString_MemFree_Cb MkString_MemFree;
     extern MkString_MemCopy_Cb MkString_MemCopy;
-
 
     //-------------------
     // PUBLIC INTERFACE
