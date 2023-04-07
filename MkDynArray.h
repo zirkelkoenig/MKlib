@@ -12,6 +12,7 @@ Usage:
 
 //----------------
 // DEFINITIONS
+//----------------
 
 #ifndef MK_DYN_ARRAY
 #define MK_DYN_ARRAY
@@ -32,6 +33,7 @@ extern "C"
 
     //-------------------
     // MEMORY MANAGEMENT
+    //-------------------
 
     extern MkDynArray_MemAlloc_Cb MkDynArray_MemAlloc;
     extern MkDynArray_MemRealloc_Cb MkDynArray_MemRealloc;
@@ -40,6 +42,7 @@ extern "C"
 
     //-------------------
     // PUBLIC INTERFACE
+    //-------------------
 
     // T * MkDynArray_Create(T, const size_t capacity)
     //
@@ -66,6 +69,8 @@ extern "C"
 
     //--------------------------
     // IMPLEMENTATION
+    //--------------------------
+
     void * MkDynArray_Create_Impl(const size_t elemSize, const size_t capacity);
     int MkDynArray_Increment_Impl(void ** array);
 
