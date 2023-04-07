@@ -7,6 +7,18 @@
 #include <wchar.h>
 #endif
 
+typedef unsigned char byte;
+
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned long u32;
+typedef unsigned long long u64;
+
+typedef char i8;
+typedef short i16;
+typedef long i32;
+typedef long long i64;
+
 typedef void * (*MkString_MemAlloc_Cb)(size_t size);
 typedef void * (*MkString_MemRealloc_Cb)(void * pointer, size_t size);
 typedef void (*MkString_MemFree_Cb)(void * pointer);
@@ -16,7 +28,7 @@ typedef void (*MkString_MemCopy_Cb)(void * dest, const void * source, size_t siz
 extern "C"
 {
 #endif
-
+    // NOTE: You must set these!
     extern MkString_MemAlloc_Cb MkString_MemAlloc;
     extern MkString_MemRealloc_Cb MkString_MemRealloc;
     extern MkString_MemFree_Cb MkString_MemFree;
@@ -55,6 +67,14 @@ extern "C"
     // WARNING: Make sure the C string is valid!
     // Returns 0 if memory allocation failed.
     int MkStringW_AppendWin32PathC(MkStringW * win32Path, const wchar_t * element);
+
+    // Convert a string into a UTF-8 byte stream.
+    // Returns NULL if memory allocation failed.
+    byte * MkStringW_ToUtf8(const MkStringW * string, size_t * count);
+
+    // Parse a UTF-8 byte stream into a string. Errors will be marked by the replacement char 0xFFFD.
+    // Returns NULL if memory allocation failed.
+    MkStringW * MkStringW_FromUtf8(const byte * stream, const size_t count);
 
 #ifdef __cplusplus
 }
