@@ -1,3 +1,7 @@
+*.sln
 *.user
+*.vcxproj*
+
 .vs
+
 [Dd]ebug/
