@@ -130,7 +130,7 @@ int MkStringW_Append_C(MkStringW * dest, const wchar_t * source)
     return 1;
 }
 
-int MkStringW_AppendWin32Path_C(MkStringW * win32Path, const wchar_t * element)
+int MkStringW_AppendWin32Path_C(MkStringW * win32Path, const wchar_t * component)
 {
     assert(MkString_MemAlloc);
     assert(MkString_MemRealloc);
@@ -138,28 +138,31 @@ int MkStringW_AppendWin32Path_C(MkStringW * win32Path, const wchar_t * element)
     assert(MkString_MemCopy);
 
     assert(win32Path);
-    assert(element);
+    assert(component);
 
-    const size_t offset = win32Path->length == 0 || win32Path->chars[win32Path->length - 1] == L'\\' ? 0 : 1;
-    const size_t elementLength = wcslen(element);
-    const size_t newLength = win32Path->length + elementLength + offset;
-
-    wchar_t * newChars = MkString_MemRealloc(win32Path->chars, (newLength + 1) * sizeof(wchar_t));
-    if (!newChars)
+    int separatorAdded;
+    if (win32Path->length == 0 || win32Path->chars[win32Path->length - 1] != L'\\')
     {
+        win32Path->chars[win32Path->length++] = L'\\';
+        separatorAdded = 1;
+    }
+    else
+    {
+        separatorAdded = 0;
+    }
+
+    if (MkStringW_Append_C(win32Path, component))
+    {
+        return 1;
+    }
+    else
+    {
+        if (separatorAdded)
+        {
+            win32Path->chars[--win32Path->length] = L'\0';
+        }
         return 0;
     }
-    if (offset == 1)
-    {
-        newChars[win32Path->length] = L'\\';
-        win32Path->length++;
-    }
-    MkString_MemCopy(newChars + win32Path->length, element, elementLength * sizeof(wchar_t));
-    newChars[newLength] = L'\0';
-
-    win32Path->chars = newChars;
-    win32Path->length = newLength;
-    return 1;
 }
 
 byte * MkStringW_ToUtf8(const MkStringW * string, size_t * count)
