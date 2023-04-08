@@ -8,17 +8,17 @@ typedef struct {
     size_t growCount;
 } Head;
 
-void * MkDynArray_Create_Impl(const size_t elemSize, const size_t capacity) {
-    assert(MkDynArray_MemAlloc);
-    assert(MkDynArray_MemRealloc);
-    assert(MkDynArray_MemFree);
-    assert(MkDynArray_MemCopy);
+void * MkLib_DynArray_Create_Impl(const size_t elemSize, const size_t capacity) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(elemSize != 0);
     assert(capacity != 0);
 
     const size_t size = sizeof(Head) + capacity * elemSize;
-    Head * head = MkDynArray_MemAlloc(size);
+    Head * head = MkLib_MemAlloc(size);
     if (!head) {
         return NULL;
     }
@@ -30,11 +30,11 @@ void * MkDynArray_Create_Impl(const size_t elemSize, const size_t capacity) {
     return head + 1;
 }
 
-size_t MkDynArray_Count(void * array) {
-    assert(MkDynArray_MemAlloc);
-    assert(MkDynArray_MemRealloc);
-    assert(MkDynArray_MemFree);
-    assert(MkDynArray_MemCopy);
+size_t MkLib_DynArray_Count(void * array) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(array);
 
@@ -42,23 +42,23 @@ size_t MkDynArray_Count(void * array) {
     return head->count;
 }
 
-void MkDynArray_Destroy(void * array) {
-    assert(MkDynArray_MemAlloc);
-    assert(MkDynArray_MemRealloc);
-    assert(MkDynArray_MemFree);
-    assert(MkDynArray_MemCopy);
+void MkLib_DynArray_Destroy(void * array) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(array);
 
     Head * head = (Head *)array - 1;
-    MkDynArray_MemFree(head);
+    MkLib_MemFree(head);
 }
 
-int MkDynArray_Increment_Impl(void ** array) {
-    assert(MkDynArray_MemAlloc);
-    assert(MkDynArray_MemRealloc);
-    assert(MkDynArray_MemFree);
-    assert(MkDynArray_MemCopy);
+int MkLib_DynArray_Increment_Impl(void ** array) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(array);
     assert(*array);
@@ -69,7 +69,7 @@ int MkDynArray_Increment_Impl(void ** array) {
     if (head->count == head->capacity) {
         size_t newCapacity = head->capacity + head->growCount;
         size_t size = sizeof(Head) + newCapacity * head->elemSize;
-        head = MkDynArray_MemRealloc(head, size);
+        head = MkLib_MemRealloc(head, size);
         if (!head) {
             return 0;
         }

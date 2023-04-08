@@ -1,191 +1,218 @@
 #include <assert.h>
 #include "MkString.h"
 
-MkStringW * MkStringW_Copy_Cw(const wchar_t * cwString) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
+byte * CwStringToUtf8_Impl(const wchar_t * string, const size_t stringLength, size_t * utf8Length);
+void CwStringFromUtf8_Impl(const byte * utf8, const size_t utf8Length, wchar_t * string, size_t * stringLength);
 
-    assert(cwString);
+byte * MkLib_CwStringToUtf8(const wchar_t * string, size_t * utf8Length) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
-    MkStringW * string = MkString_MemAlloc(sizeof(MkStringW));
+    assert(string);
+    assert(utf8Length);
+
+    return CwStringToUtf8_Impl(string, wcslen(string), utf8Length);
+}
+
+wchar_t * MkLib_CwStringFromUtf8(const byte * utf8, const size_t utf8Length) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
+
+    assert(utf8Length == 0 || utf8);
+
+    wchar_t * string = MkLib_MemAlloc((utf8Length + 1) * sizeof(wchar_t));
     if (!string) {
         return NULL;
     }
-
-    string->length = wcslen(cwString);
-    string->chars = MkString_MemAlloc((string->length + 1) * sizeof(wchar_t));
-    if (!string->chars) {
-        MkString_MemFree(string);
-        return NULL;
-    }
-
-    MkString_MemCopy(string->chars, cwString, string->length * sizeof(wchar_t));
-    string->chars[string->length] = L'\0';
+    size_t stringLength;
+    CwStringFromUtf8_Impl(utf8, utf8Length, string, &stringLength);
+    string = MkLib_MemRealloc(string, (stringLength + 1) * sizeof(wchar_t));
     return string;
 }
 
-MkStringW * MkStringW_Copy(const MkStringW * string) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
+MkLib_StringW * MkLib_StringW_FromCwString(const wchar_t * cwString) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
+
+    assert(cwString);
+
+    size_t length = wcslen(cwString);
+    MkLib_StringW * string = MkLib_MemAlloc(sizeof(MkLib_StringW) + length * sizeof(wchar_t));
+    if (!string) {
+        return NULL;
+    }
+    MkLib_MemCopy(string->chars, cwString, length);
+    string->chars[length] = L'\0';
+    string->length = length;
+    return string;
+}
+
+MkLib_StringW * MkLib_StringW_Copy(const MkLib_StringW * string) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(string);
 
-    MkStringW * copy = MkString_MemAlloc(sizeof(MkStringW));
+    size_t size = sizeof(MkLib_StringW) + string->length * sizeof(wchar_t);
+    MkLib_StringW * copy = MkLib_MemAlloc(size);
     if (!copy) {
         return NULL;
     }
-
-    copy->chars = MkString_MemAlloc((string->length + 1) * sizeof(wchar_t));
-    if (!copy->chars) {
-        MkString_MemFree(copy);
-        return NULL;
-    }
-    copy->length = string->length;
-
-    MkString_MemCopy(copy->chars, string->chars, string->length * sizeof(wchar_t));
-    copy->chars[copy->length] = L'\0';
+    MkLib_MemCopy(copy, string, size);
     return copy;
 }
 
-MkStringW * MkStringW_Concat_Cw(const wchar_t * cwStringA, const wchar_t * cwStringB) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
+MkLib_StringW * MkLib_StringW_FromConcatCwStrings(const wchar_t * cwStringA, const wchar_t * cwStringB) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(cwStringA);
     assert(cwStringB);
 
-    const size_t lengthA = wcslen(cwStringA);
-    const size_t lengthB = wcslen(cwStringB);
-
-    MkStringW * string = MkString_MemAlloc(sizeof(MkStringW));
-    if (!string) {
+    size_t lengthA = wcslen(cwStringA);
+    size_t lengthB = wcslen(cwStringB);
+    size_t concatLength = lengthA + lengthB;
+    MkLib_StringW * concat = MkLib_MemAlloc(sizeof(MkLib_StringW) + concatLength * sizeof(wchar_t));
+    if (!concat) {
         return NULL;
     }
-
-    string->length = lengthA + lengthB;
-    string->chars = MkString_MemAlloc((string->length + 1) * sizeof(wchar_t));
-    if (!string->chars) {
-        MkString_MemFree(string);
-        return NULL;
-    }
-
-    MkString_MemCopy(string->chars, cwStringA, lengthA * sizeof(wchar_t));
-    MkString_MemCopy(string->chars + lengthA, cwStringB, lengthB * sizeof(wchar_t));
-    string->chars[string->length] = L'\0';
-    return string;
+    MkLib_MemCopy(concat->chars, cwStringA, lengthA);
+    MkLib_MemCopy(concat->chars + lengthA, cwStringB, lengthB);
+    concat->chars[concatLength] = L'\0';
+    concat->length = concatLength;
+    return concat;
 }
 
-void MkStringW_Destroy(MkStringW * string) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
+void MkLib_StringW_Destroy(MkLib_StringW * string) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(string);
-    assert(string->chars);
-
-    MkString_MemFree(string->chars);
-    MkString_MemFree(string);
+    MkLib_MemFree(string);
 }
 
-int MkStringW_Append_Cw(MkStringW * dest, const wchar_t * source) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
+int MkLib_StringW_AppendCwString(MkLib_StringW ** dest, const wchar_t * source) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(dest);
+    assert(*dest);
     assert(source);
 
-    const size_t sourceLength = wcslen(source);
-    const size_t newLength = dest->length + sourceLength;
-
-    wchar_t * newChars = MkString_MemRealloc(dest->chars, (newLength + 1) * sizeof(wchar_t));
-    if (!newChars) {
+    size_t sourceLength = wcslen(source);
+    size_t newDestLength = (*dest)->length + sourceLength;
+    MkLib_StringW * newDest = MkLib_MemRealloc(*dest, sizeof(MkLib_StringW) + newDestLength * sizeof(wchar_t));
+    if (!newDest) {
         return 0;
     }
-    MkString_MemCopy(newChars + dest->length, source, sourceLength * sizeof(wchar_t));
-    newChars[newLength] = L'\0';
-
-    dest->chars = newChars;
-    dest->length = newLength;
+    MkLib_MemCopy(newDest->chars + newDest->length, source, sourceLength);
+    newDest->chars[newDestLength] = L'\0';
+    newDest->length = newDestLength;
+    *dest = newDest;
     return 1;
 }
 
-int MkStringW_AppendWin32Path_Cw(MkStringW * win32Path, const wchar_t * component) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
+int MkLib_StringW_AppendCwWin32Path(MkLib_StringW ** win32Path, const wchar_t * component) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(win32Path);
+    assert(*win32Path);
     assert(component);
 
     int separatorAdded;
-    if (win32Path->length == 0 || win32Path->chars[win32Path->length - 1] != L'\\') {
-        win32Path->chars[win32Path->length++] = L'\\';
+    if ((*win32Path)->chars[(*win32Path)->length - 1] != L'\\') {
+        (*win32Path)->chars[(*win32Path)->length++] = L'\\';
         separatorAdded = 1;
     } else {
         separatorAdded = 0;
     }
 
-    if (MkStringW_Append_Cw(win32Path, component)) {
-        return 1;
-    } else {
-        if (separatorAdded) {
-            win32Path->chars[--win32Path->length] = L'\0';
-        }
+    if (!MkLib_StringW_AppendCwString(win32Path, component) && separatorAdded) {
+        (*win32Path)->chars[--(*win32Path)->length] = L'\0';
         return 0;
     }
+    return 1;
 }
 
-byte * MkStringW_ToUtf8(const MkStringW * string, size_t * streamLength) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
+byte * MkLib_StringW_ToUtf8(const MkLib_StringW * string, size_t * utf8Length) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
 
     assert(string);
-    assert(streamLength);
+    assert(utf8Length);
 
-    byte * utf8String = MkString_MemAlloc(4 * string->length);
-    if (!utf8String) {
+    return CwStringToUtf8_Impl(string->chars, string->length, utf8Length);
+}
+
+MkLib_StringW * MkLib_StringW_FromUtf8(const byte * utf8, const size_t utf8Length) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
+
+    assert(utf8Length == 0 || utf8);
+
+    MkLib_StringW * string = MkLib_MemAlloc(sizeof(MkLib_StringW) + utf8Length * sizeof(wchar_t));
+    if (!string) {
         return NULL;
     }
+    CwStringFromUtf8_Impl(utf8, utf8Length, string->chars, &string->length);
+    string = MkLib_MemRealloc(string, sizeof(MkLib_StringW) + string->length * sizeof(wchar_t));
+    return string;
+}
 
-    size_t streamLengthImpl = 0;
-    for (size_t i = 0; i != string->length; i++) {
-        wchar_t c = string->chars[i];
+byte * CwStringToUtf8_Impl(const wchar_t * string, const size_t stringLength, size_t * utf8Length) {
+    byte * utf8 = MkLib_MemAlloc(4 * stringLength);
+    if (!utf8) {
+        return NULL;
+    }
+    *utf8Length = 0;
+
+    for (size_t i = 0; i != stringLength; i++) {
+        u32 c = string[i];
         if (c <= 0x007f) {
-            utf8String[streamLengthImpl++] = c;
+            utf8[*utf8Length++] = (byte)c;
         } else if (c <= 0x07ff) {
-            utf8String[streamLengthImpl++] = (c >> 6) + 0b11000000;
-            utf8String[streamLengthImpl++] = (c & 0b00111111) + 0b10000000;
+            utf8[*utf8Length++] = (byte)((c >> 6) + 0b11000000);
+            utf8[*utf8Length++] = (byte)((c & 0b00111111) + 0b10000000);
         } else if (c <= 0xffff) {
-            utf8String[streamLengthImpl++] = (c >> 12) + 0b11100000;
-            utf8String[streamLengthImpl++] = (c >> 6 & 0b00111111) + 0b10000000;
-            utf8String[streamLengthImpl++] = (c & 0b00111111) + 0b10000000;
+            utf8[*utf8Length++] = (byte)((c >> 12) + 0b11100000);
+            utf8[*utf8Length++] = (byte)((c >> 6 & 0b00111111) + 0b10000000);
+            utf8[*utf8Length++] = (byte)((c & 0b00111111) + 0b10000000);
         } else if (c <= 0x0010ffff) {
-            utf8String[streamLengthImpl++] = (c >> 18) + 0b11110000;
-            utf8String[streamLengthImpl++] = (c >> 12 & 0b00111111) + 0b10000000;
-            utf8String[streamLengthImpl++] = (c >> 6 & 0b00111111) + 0b10000000;
-            utf8String[streamLengthImpl++] = (c & 0b00111111) + 0b10000000;
+            utf8[*utf8Length++] = (byte)((c >> 18) + 0b11110000);
+            utf8[*utf8Length++] = (byte)((c >> 12 & 0b00111111) + 0b10000000);
+            utf8[*utf8Length++] = (byte)((c >> 6 & 0b00111111) + 0b10000000);
+            utf8[*utf8Length++] = (byte)((c & 0b00111111) + 0b10000000);
         } else {
-            utf8String[streamLengthImpl++] = 0b11101111;
-            utf8String[streamLengthImpl++] = 0b10111111;
-            utf8String[streamLengthImpl++] = 0b10111101;
+            // 0xFFFD
+            utf8[*utf8Length++] = 0b11101111;
+            utf8[*utf8Length++] = 0b10111111;
+            utf8[*utf8Length++] = 0b10111101;
         }
     }
 
-    utf8String = MkString_MemRealloc(utf8String, streamLengthImpl);
-    *streamLength = streamLengthImpl;
-    return utf8String;
+    utf8 = MkLib_MemRealloc(utf8, *utf8Length);
+    return utf8;
 }
 
 typedef enum {
@@ -198,23 +225,22 @@ typedef enum {
     UTF8_READ_ERROR,
 } Utf8State;
 
-wchar_t * CwFromUtf8Impl(const byte * utf8, const size_t utf8Length, size_t * cwStringLength) {
-    wchar_t * chars = MkString_MemAlloc((utf8Length + 1) * sizeof(wchar_t));
-    if (!chars) {
-        return NULL;
-    }
-    size_t charsCount = 0;
+void CwStringFromUtf8_Impl(const byte * utf8, const size_t utf8Length, wchar_t * string, size_t * stringLength) {
+    assert(utf8Length == 0 || utf8);
+    assert(string);
+    assert(stringLength);
 
     int limited = sizeof(wchar_t) < 4;
 
     Utf8State state = UTF8_START;
     size_t i = 0;
     u32 c = 0;
-    size_t readCount = 0;
+    *stringLength = 0;
     while (i != utf8Length || state == UTF8_END_OK || state == UTF8_END_ERROR) {
         switch (state) {
             case UTF8_START:
             {
+                size_t readCount;
                 if ((utf8[i] & 0b10000000) == 0b00000000) {
                     c = utf8[i++];
                     readCount = 0;
@@ -251,13 +277,12 @@ wchar_t * CwFromUtf8Impl(const byte * utf8, const size_t utf8Length, size_t * cw
             case UTF8_END_OK:
             {
                 if (c > 0xffff && limited) {
-                    chars[charsCount++] = 0xfffd;
+                    string[(*stringLength)++] = 0xfffd;
                 } else {
-                    chars[charsCount] = c;
                     if (c == L'\0') {
                         i = utf8Length;
                     } else {
-                        charsCount++;
+                        string[(*stringLength)++] = (wchar_t)c;
                     }
                 }
                 state = UTF8_START;
@@ -266,7 +291,7 @@ wchar_t * CwFromUtf8Impl(const byte * utf8, const size_t utf8Length, size_t * cw
 
             case UTF8_END_ERROR:
             {
-                chars[charsCount++] = 0xfffd;
+                string[(*stringLength)++] = 0xfffd;
                 state = UTF8_START;
                 break;
             }
@@ -316,51 +341,5 @@ wchar_t * CwFromUtf8Impl(const byte * utf8, const size_t utf8Length, size_t * cw
             }
         }
     }
-
-    chars[charsCount] = L'\0';
-    chars = MkString_MemRealloc(chars, (charsCount + 1) * sizeof(wchar_t));
-
-    *cwStringLength = charsCount;
-    return chars;
-}
-
-wchar_t * MkString_CwFromUtf8(const byte * utf8, const size_t utf8Length) {
-    size_t cwStringLength;
-    return CwFromUtf8Impl(utf8, utf8Length, &cwStringLength);
-}
-
-MkStringW * MkStringW_FromUtf8(const byte * stream, const size_t streamLength) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
-
-    assert(stream);
-
-    MkStringW * string = MkString_MemAlloc(sizeof(MkStringW));
-    if (!string) {
-        return NULL;
-    }
-
-    string->chars = CwFromUtf8Impl(stream, streamLength, &string->length);
-    if (!string->chars) {
-        MkString_MemFree(string);
-        return NULL;
-    }
-    return string;
-}
-
-byte * MkString_CwToUtf8(const wchar_t * cwString, size_t * utf8Length) {
-    assert(MkString_MemAlloc);
-    assert(MkString_MemRealloc);
-    assert(MkString_MemFree);
-    assert(MkString_MemCopy);
-
-    assert(cwString);
-    assert(utf8Length);
-
-    MkStringW string;
-    string.chars = cwString;
-    string.length = wcslen(cwString);
-    return MkStringW_ToUtf8(&string, utf8Length);
+    string[*stringLength] = L'\0';
 }
