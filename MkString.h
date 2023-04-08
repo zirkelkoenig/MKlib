@@ -56,8 +56,7 @@ byte * MkString_CwToUtf8(const wchar_t * cwString, size_t * utf8Length);
 wchar_t * MkString_CwFromUtf8(const byte * utf8, const size_t utf8Length);
 
 // A safer wide string type.
-typedef struct
-{
+typedef struct {
     wchar_t * chars;
     size_t length;
 } MkStringW;

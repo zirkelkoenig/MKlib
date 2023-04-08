@@ -1,16 +1,14 @@
 #include <assert.h>
 #include "MkDynArray.h"
 
-typedef struct
-{
+typedef struct {
     size_t count;
     size_t capacity;
     size_t elemSize;
     size_t growCount;
 } Head;
 
-void * MkDynArray_Create_Impl(const size_t elemSize, const size_t capacity)
-{
+void * MkDynArray_Create_Impl(const size_t elemSize, const size_t capacity) {
     assert(MkDynArray_MemAlloc);
     assert(MkDynArray_MemRealloc);
     assert(MkDynArray_MemFree);
@@ -21,8 +19,7 @@ void * MkDynArray_Create_Impl(const size_t elemSize, const size_t capacity)
 
     const size_t size = sizeof(Head) + capacity * elemSize;
     Head * head = MkDynArray_MemAlloc(size);
-    if (!head)
-    {
+    if (!head) {
         return NULL;
     }
     head->count = 0;
@@ -33,8 +30,7 @@ void * MkDynArray_Create_Impl(const size_t elemSize, const size_t capacity)
     return head + 1;
 }
 
-size_t MkDynArray_Count(void * array)
-{
+size_t MkDynArray_Count(void * array) {
     assert(MkDynArray_MemAlloc);
     assert(MkDynArray_MemRealloc);
     assert(MkDynArray_MemFree);
@@ -46,8 +42,7 @@ size_t MkDynArray_Count(void * array)
     return head->count;
 }
 
-void MkDynArray_Destroy(void * array)
-{
+void MkDynArray_Destroy(void * array) {
     assert(MkDynArray_MemAlloc);
     assert(MkDynArray_MemRealloc);
     assert(MkDynArray_MemFree);
@@ -59,8 +54,7 @@ void MkDynArray_Destroy(void * array)
     MkDynArray_MemFree(head);
 }
 
-int MkDynArray_Increment_Impl(void ** array)
-{
+int MkDynArray_Increment_Impl(void ** array) {
     assert(MkDynArray_MemAlloc);
     assert(MkDynArray_MemRealloc);
     assert(MkDynArray_MemFree);
@@ -72,13 +66,11 @@ int MkDynArray_Increment_Impl(void ** array)
     Head * head = (Head *)*array - 1;
     assert(head->count <= head->capacity);
 
-    if (head->count == head->capacity)
-    {
+    if (head->count == head->capacity) {
         size_t newCapacity = head->capacity + head->growCount;
         size_t size = sizeof(Head) + newCapacity * head->elemSize;
         head = MkDynArray_MemRealloc(head, size);
-        if (!head)
-        {
+        if (!head) {
             return 0;
         }
         head->capacity = newCapacity;
