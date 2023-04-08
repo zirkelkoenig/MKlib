@@ -2,6 +2,7 @@
 *.user
 *.vcxproj*
 
+.editorconfig
 .vs
 
 [Dd]ebug/
