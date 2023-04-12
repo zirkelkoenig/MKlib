@@ -63,4 +63,8 @@ byte * MkLib_StringW_ToUtf8(const MkLib_StringW * string, size_t * utf8Length);
 // Returns NULL if memory allocation failed.
 MkLib_StringW * MkLib_StringW_FromUtf8(const byte * utf8, const size_t utf8Length);
 
+// Parse a UTF-8 byte array into one string per line. Errors will be marked by the replacement char 0xFFFD.
+// Returns NULL if memory allocation failed.
+MkLib_StringW ** MkLib_StringW_LinesFromUtf8(const byte * utf8, const size_t utf8Length, size_t * lineCount);
+
 #endif

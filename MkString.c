@@ -343,3 +343,63 @@ void CwStringFromUtf8_Impl(const byte * utf8, const size_t utf8Length, wchar_t *
     }
     string[*stringLength] = L'\0';
 }
+
+MkLib_StringW ** MkLib_StringW_LinesFromUtf8(const byte * utf8, const size_t utf8Length, size_t * lineCount) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
+
+    assert(utf8Length == 0 || utf8);
+    assert(lineCount);
+
+    MkLib_StringW ** lines = MkLib_MemAlloc(256 * sizeof(MkLib_StringW *));
+    if (!lines) {
+        return NULL;
+    }
+    *lineCount = 0;
+
+    byte * lineStart = utf8;
+    byte * lineEnd = utf8;
+    const byte * eof = utf8 + utf8Length;
+    while (lineEnd != eof) {
+        if (*lineEnd == '\r' || *lineEnd == '\n' || *lineEnd == '\0' || lineEnd == eof) {
+            if (*lineCount % 256 == 0 && *lineCount != 0) {
+                MkLib_StringW ** newLines = MkLib_MemRealloc(lines, (*lineCount + 256) * sizeof(MkLib_StringW *));
+                if (!newLines) {
+                    goto error;
+                }
+                lines = newLines;
+            }
+
+            lines[*lineCount] = MkLib_StringW_FromUtf8(lineStart, lineEnd - lineStart);
+            if (!lines[*lineCount]) {
+                goto error;
+            }
+            (*lineCount)++;
+
+            if (*lineEnd == '\0') {
+                lineEnd = eof;
+            } else if (*lineEnd == '\r') {
+                lineEnd++;
+                if (lineEnd != eof && *lineEnd == '\n') {
+                    lineEnd++;
+                }
+            } else {
+                lineEnd++;
+            }
+            lineStart = lineEnd;
+        } else {
+            lineEnd++;
+        }
+    }
+
+    return lines;
+
+error:
+    for (size_t i = 0; i != *lineCount; i++) {
+        MkLib_MemFree(lines[i]);
+    }
+    MkLib_MemFree(lines);
+    return NULL;
+}

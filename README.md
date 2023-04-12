@@ -1,1 +1,6 @@
-WARNING: None of this code has been tested yet!
+# Tested by Usage
+
+## MkString.c
+
+- StringW_FromUtf8
+- StringW_LinesFromUtf8
