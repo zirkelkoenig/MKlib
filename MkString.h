@@ -22,6 +22,11 @@ byte * MkLib_CwStringToUtf8(const wchar_t * string, size_t * utf8Length);
 // Returns NULL if memory allocation failed.
 wchar_t * MkLib_CwStringFromUtf8(const byte * utf8, const size_t utf8Length);
 
+// Parse a UTF-8 byte array into one dynamic array per line (which won't be 0-terminated). Errors will be marked by the
+// replacement char 0xFFFD.
+// Returns NULL if memory allocation failed.
+wchar_t ** MkLib_CwDynArrayLinesFromUtf8(const byte * utf8, const size_t utf8Length);
+
 // A safer wide string type.
 typedef struct {
     size_t length;

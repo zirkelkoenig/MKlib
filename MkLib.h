@@ -25,6 +25,7 @@ typedef void * (*MkLib_MemAlloc_Cb)(size_t size);
 typedef void * (*MkLib_MemRealloc_Cb)(void * pointer, size_t size);
 typedef void (*MkLib_MemFree_Cb)(void * pointer);
 typedef void (*MkLib_MemCopy_Cb)(void * dest, const void * source, size_t size);
+typedef void (*MkLib_MemMove_Cb)(void * dest, const void * source, size_t size);
 
 //----------------------
 // MEMORY MANAGEMENT
@@ -33,5 +34,6 @@ extern MkLib_MemAlloc_Cb MkLib_MemAlloc;
 extern MkLib_MemRealloc_Cb MkLib_MemRealloc;
 extern MkLib_MemFree_Cb MkLib_MemFree;
 extern MkLib_MemCopy_Cb MkLib_MemCopy;
+extern MkLib_MemMove_Cb MkLib_MemMove;
 
 #endif

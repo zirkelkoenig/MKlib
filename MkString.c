@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "MkString.h"
+#include "MkDynArray.h"
 
 byte * CwStringToUtf8_Impl(const wchar_t * string, const size_t stringLength, size_t * utf8Length);
 void CwStringFromUtf8_Impl(const byte * utf8, const size_t utf8Length, wchar_t * string, size_t * stringLength);
@@ -9,6 +10,7 @@ byte * MkLib_CwStringToUtf8(const wchar_t * string, size_t * utf8Length) {
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(string);
     assert(utf8Length);
@@ -21,6 +23,7 @@ wchar_t * MkLib_CwStringFromUtf8(const byte * utf8, const size_t utf8Length) {
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(utf8Length == 0 || utf8);
 
@@ -39,6 +42,7 @@ MkLib_StringW * MkLib_StringW_FromCwString(const wchar_t * cwString) {
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(cwString);
 
@@ -58,6 +62,7 @@ MkLib_StringW * MkLib_StringW_Copy(const MkLib_StringW * string) {
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(string);
 
@@ -75,6 +80,7 @@ MkLib_StringW * MkLib_StringW_FromConcatCwStrings(const wchar_t * cwStringA, con
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(cwStringA);
     assert(cwStringB);
@@ -98,6 +104,7 @@ void MkLib_StringW_Destroy(MkLib_StringW * string) {
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(string);
     MkLib_MemFree(string);
@@ -108,6 +115,7 @@ int MkLib_StringW_AppendCwString(MkLib_StringW ** dest, const wchar_t * source) 
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(dest);
     assert(*dest);
@@ -131,6 +139,7 @@ int MkLib_StringW_AppendCwWin32Path(MkLib_StringW ** win32Path, const wchar_t * 
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(win32Path);
     assert(*win32Path);
@@ -156,6 +165,7 @@ byte * MkLib_StringW_ToUtf8(const MkLib_StringW * string, size_t * utf8Length) {
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(string);
     assert(utf8Length);
@@ -168,6 +178,7 @@ MkLib_StringW * MkLib_StringW_FromUtf8(const byte * utf8, const size_t utf8Lengt
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(utf8Length == 0 || utf8);
 
@@ -344,11 +355,74 @@ void CwStringFromUtf8_Impl(const byte * utf8, const size_t utf8Length, wchar_t *
     string[*stringLength] = L'\0';
 }
 
+wchar_t ** MkLib_CwDynArrayLinesFromUtf8(const byte * utf8, const size_t utf8Length) {
+    assert(MkLib_MemAlloc);
+    assert(MkLib_MemRealloc);
+    assert(MkLib_MemFree);
+    assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
+
+    assert(utf8Length == 0 || utf8);
+
+    wchar_t ** lines = MkLib_DynArray_Create(wchar_t *, 256, 256);
+    if (!lines) {
+        return NULL;
+    }
+
+    byte * lineStart = utf8;
+    byte * lineEnd = utf8;
+    const byte * eof = utf8 + utf8Length;
+    while (lineEnd != eof) {
+        if (*lineEnd == '\r' || *lineEnd == '\n' || *lineEnd == '\0' || lineEnd == eof) {
+            size_t lineLength = lineEnd - lineStart;
+            wchar_t * line = MkLib_DynArray_Create(wchar_t, (((lineLength + 1) / 8) + 1) * 8, 8);
+            if (!line) {
+                goto error;
+            }
+
+            size_t stringLength;
+            CwStringFromUtf8_Impl(lineStart, lineLength, line, &stringLength);
+            MkLib_DynArray_SetCount(&line, stringLength);
+
+            if (!MkLib_DynArray_Push(&lines, line)) {
+                MkLib_DynArray_Destroy(line);
+                goto error;
+            }
+
+            if (*lineEnd == '\0') {
+                lineEnd = eof;
+            } else if (*lineEnd == '\r') {
+                lineEnd++;
+                if (lineEnd != eof && *lineEnd == '\n') {
+                    lineEnd++;
+                }
+            } else {
+                lineEnd++;
+            }
+            lineStart = lineEnd;
+        } else {
+            lineEnd++;
+        }
+    }
+
+    return lines;
+
+error:
+    ;
+    size_t destroyLineCount = MkLib_DynArray_Count(lines);
+    for (size_t i = 0; i != destroyLineCount; i++) {
+        MkLib_DynArray_Destroy(lines[i]);
+    }
+    MkLib_DynArray_Destroy(lines);
+    return NULL;
+}
+
 MkLib_StringW ** MkLib_StringW_LinesFromUtf8(const byte * utf8, const size_t utf8Length, size_t * lineCount) {
     assert(MkLib_MemAlloc);
     assert(MkLib_MemRealloc);
     assert(MkLib_MemFree);
     assert(MkLib_MemCopy);
+    assert(MkLib_MemMove);
 
     assert(utf8Length == 0 || utf8);
     assert(lineCount);
