@@ -13,5 +13,6 @@
 ## MkString.c
 
 - CwDynArrayLinesFromUtf8
+- CwStringFindChar
 - StringW_FromUtf8
 - StringW_LinesFromUtf8

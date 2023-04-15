@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdint.h>
 #include "MkString.h"
 #include "MkDynArray.h"
 
@@ -476,4 +477,15 @@ error:
     }
     MkLib_MemFree(lines);
     return NULL;
+}
+
+size_t MkLib_CwStringFindChar(const wchar_t * string, const size_t length, const size_t start, const wchar_t c) {
+    assert(string);
+    assert(start <= length);
+    for (size_t i = start; i != length; i++) {
+        if (string[i] == c) {
+            return i;
+        }
+    }
+    return SIZE_MAX;
 }

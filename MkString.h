@@ -27,6 +27,10 @@ wchar_t * MkLib_CwStringFromUtf8(const byte * utf8, const size_t utf8Length);
 // Returns NULL if memory allocation failed.
 wchar_t ** MkLib_CwDynArrayLinesFromUtf8(const byte * utf8, const size_t utf8Length);
 
+// Find the first occurence of a character in a wide C string, starting at the given index.
+// Returns SIZE_MAX if the character was not found.
+size_t MkLib_CwStringFindChar(const wchar_t * string, const size_t length, const size_t start, const wchar_t c);
+
 // A safer wide string type.
 typedef struct {
     size_t length;
