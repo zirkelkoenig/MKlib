@@ -107,6 +107,7 @@ int MkLib_DynArray_Shift_Impl(void ** array, const size_t index) {
 
     byte * location = (byte *)*array + index * head->elemSize;
     MkLib_MemMove(location + head->elemSize, location, (head->count - 1 - index) * head->elemSize);
+    return 1;
 }
 
 void MkLib_DynArray_Remove(void * array, size_t index) {
