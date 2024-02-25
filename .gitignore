@@ -1,8 +1,5 @@
 *.sln
-*.user
 *.vcxproj*
 
-.editorconfig
-.vs
-
-[Dd]ebug/
+.vs/
+x64/

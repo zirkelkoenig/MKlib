@@ -1,79 +1,78 @@
-/*
-Safe string types and additional useful string functionality.
+#if !defined(_MKLIB_STRING_H)
+#define _MKLIB_STRING_H
 
-Usage:
-- You must define and set pointers to memory management functions (see MkLib.h).
-- None of the functions accept NULL pointers, except where explicitly stated.
-- Assertions are used to check input parameters.
-*/
+#include "MkList.h"
 
-#ifndef MK_STRING_HEADER
-#define MK_STRING_HEADER
+typedef unsigned char byte;
+typedef unsigned long ulong;
 
-#include <wchar.h>
-#include "MkLib.h"
 
-// Convert a C string into a UTF-8 byte array.
-// WARNING: Make sure the C string is valid!
-// Returns NULL if memory allocation failed.
-byte * MkLib_CwStringToUtf8(const wchar_t * string, size_t * utf8Length);
+//---------------------
+// C STRING FUNCTIONS
 
-// Parse a UTF-8 byte array into a C string. Errors will be marked by the replacement char 0xFFFD.
-// Returns NULL if memory allocation failed.
-wchar_t * MkLib_CwStringFromUtf8(const byte * utf8, const size_t utf8Length);
+// Return a pointer to the first occurrence of a given character in a string.
+// Returns NULL if the character was not found.
+wchar_t * MkWcsFindChar(wchar_t * wcs, size_t length, wchar_t wc);
 
-// Parse a UTF-8 byte array into one dynamic array per line (which won't be 0-terminated). Errors will be marked by the
-// replacement char 0xFFFD.
-// Returns NULL if memory allocation failed.
-wchar_t ** MkLib_CwDynArrayLinesFromUtf8(const byte * utf8, const size_t utf8Length);
+// Return the index of the first occurrence of any of the given characters.
+// Returns SIZE_MAX if none of the characters were found.
+size_t MkWcsFindCharsIndex(const wchar_t * wcs, size_t length, const wchar_t * chars, size_t count);
 
-// Find the first occurence of a character in a wide C string, starting at the given index.
-// Returns SIZE_MAX if the character was not found.
-size_t MkLib_CwStringFindChar(const wchar_t * string, const size_t length, const size_t start, const wchar_t c);
+// Return the index of the first occurrence of a given NULL-terminated substring.
+// Returns SIZE_MAX if the substring was not found.
+size_t MkWcsFindSubstringIndex(const wchar_t * wcs, size_t length, const wchar_t * substring);
 
-// A safer wide string type.
-typedef struct {
+// Check whether a string starts with the given NULL-terminated prefix.
+bool MkWcsIsPrefix(const wchar_t * wcs, size_t length, const wchar_t * prefix);
+
+
+//----------------
+// SAFE STRING
+
+// A safe string type.
+struct MkWstr {
     size_t length;
-    wchar_t chars[1];
-} MkLib_StringW;
+    wchar_t * wcs;
+};
 
-// Create a safe string by copying a C string.
-// WARNING: Make sure the C string is valid (null-terminated)! If it isn't the usual problems will arise.
-// Returns NULL if memory allocation failed.
-MkLib_StringW * MkLib_StringW_FromCwString(const wchar_t * cwString);
+// Set a safe string to refer to another string.
+static void MkWstrSet(MkWstr * wstrPtr, wchar_t * wcs, size_t length) {
+    assert(wstrPtr);
+    assert(wcs);
+    assert(length);
 
-// Create a copy.
-// Returns NULL if memory allocation failed.
-MkLib_StringW * MkLib_StringW_Copy(const MkLib_StringW * string);
+    wstrPtr->length = length;
+    wstrPtr->wcs = wcs;
+}
 
-// Create a safe string by concatenating two C strings.
-// WARNING: Make sure the C strings are valid!
-// Returns NULL if memory allocation failed.
-MkLib_StringW * MkLib_StringW_FromConcatCwStrings(const wchar_t * cwStringA, const wchar_t * cwStringB);
+// Check whether two safe strings are equal.
+bool MkWstrsAreEqual(const MkWstr * a, const MkWstr * b);
 
-// Destroy a safe string.
-void MkLib_StringW_Destroy(MkLib_StringW * string);
 
-// Append source C string to the end of dest.
-// WARNING: Make sure the C string is valid!
-// Returns 0 if memory allocation failed.
-int MkLib_StringW_AppendCwString(MkLib_StringW ** dest, const wchar_t * source);
+//----------------
+// UTF-8 FUNCTIONS
 
-// Append a C string to a Win32 folder path, inserting a separator ('\\') if necessary.
-// WARNING: Make sure the C string is valid!
-// Returns 0 if memory allocation failed.
-int MkLib_StringW_AppendCwWin32Path(MkLib_StringW ** win32Path, const wchar_t * component);
+// Read input from a byte stream.
+// Returns FALSE when no more bytes can be returned and sets a status variable.
+typedef bool (*MkReadByteStream)(void * stream, ulong count, byte * buffer, void * status);
 
-// Convert a string into a UTF-8 byte array.
-// Returns NULL if memory allocation failed.
-byte * MkLib_StringW_ToUtf8(const MkLib_StringW * string, size_t * utf8Length);
+// Write output to a byte stream.
+// Returns FALSE on error and sets a status variable.
+typedef bool (*MkWriteByteStream)(void * stream, const byte * buffer, ulong count, void * status);
 
-// Parse a UTF-8 byte array into a string. Errors will be marked by the replacement char 0xFFFD.
-// Returns NULL if memory allocation failed.
-MkLib_StringW * MkLib_StringW_FromUtf8(const byte * utf8, const size_t utf8Length);
+enum MkUtf8Options {
+    MKUTF8_NO_OPTIONS = 0,
+    MKUTF8_CRLF = 1 << 0, // convert newlines to CR+LF while writing
+    MKUTF8_STOP_AT_NULL = 1 << 1, // stop at a NULL byte
+};
 
-// Parse a UTF-8 byte array into one string per line. Errors will be marked by the replacement char 0xFFFD.
-// Returns NULL if memory allocation failed.
-MkLib_StringW ** MkLib_StringW_LinesFromUtf8(const byte * utf8, const size_t utf8Length, size_t * lineCount);
+// Read a UTF-8 byte stream and append the resulting characters to a list.
+// The output list must be properly initialized to take WCHAR_T elements.
+// Returns FALSE on memory allocation failure.
+bool MkReadUtf8Stream(MkReadByteStream readCallback, void * stream, void * status, MkUtf8Options options, MkList * listPtr);
+
+// Write text to a UTF-8 byte stream.
+// Returns FALSE on failure.
+bool MkWriteUtf8Stream(MkWriteByteStream writeCallback, void * stream, void * status, MkUtf8Options options, const wchar_t * wcs, size_t count);
 
 #endif
