@@ -2,7 +2,7 @@
 
 #include "MkList.h"
 
-void MkListInit(MkList * listPtr, size_t growCount, size_t elemSize) {
+void MkListInit(MkList * listPtr, ulong growCount, ulong elemSize) {
     assert(listPtr);
     assert(growCount != 0);
     assert(elemSize != 0);
@@ -24,7 +24,7 @@ void MkListClear(MkList * listPtr) {
     }
 }
 
-bool MkListSetCapacity(MkList * listPtr, size_t capacity) {
+bool MkListSetCapacity(MkList * listPtr, ulong capacity) {
     MkListAssert(listPtr);
     
     byte * newElems = (byte *)realloc(listPtr->elems, capacity * listPtr->elemSize);
@@ -39,26 +39,26 @@ bool MkListSetCapacity(MkList * listPtr, size_t capacity) {
     return true;
 }
 
-byte * MkListInsert(MkList * listPtr, size_t index, size_t count) {
+byte * MkListInsert(MkList * listPtr, ulong index, ulong count) {
     MkListAssert(listPtr);
-    assert(index < listPtr->count || index == SIZE_MAX);
+    assert(index < listPtr->count || index == ULONG_MAX);
 
-    size_t newCount = listPtr->count + count;
+    ulong newCount = listPtr->count + count;
     if (newCount > listPtr->capacity) {
-        size_t newCapacity = ((newCount / listPtr->growCount) + 1) * listPtr->growCount;
+        ulong newCapacity = ((newCount / listPtr->growCount) + 1) * listPtr->growCount;
         if (!MkListSetCapacity(listPtr, newCapacity)) {
             return nullptr;
         }
     }
 
-    if (index == SIZE_MAX) {
+    if (index == ULONG_MAX) {
         index = listPtr->count;
     }
     listPtr->count = newCount;
 
-    size_t offset = count * listPtr->elemSize;
-    size_t end = (index + count) * listPtr->elemSize;
-    for (size_t i = listPtr->count * listPtr->elemSize - 1; i >= end; i--) {
+    ulong offset = count * listPtr->elemSize;
+    ulong end = (index + count) * listPtr->elemSize;
+    for (ulong i = listPtr->count * listPtr->elemSize - 1; i >= end; i--) {
         listPtr->elems[i] = listPtr->elems[i - offset];
     }
 
