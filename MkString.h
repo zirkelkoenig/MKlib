@@ -38,8 +38,7 @@ struct MkWstr {
 // Set a safe string to refer to another string.
 static void MkWstrSet(MkWstr * wstrPtr, wchar_t * wcs, ulong length) {
     assert(wstrPtr);
-    assert(wcs);
-    assert(length);
+    assert(wcs || length == 0);
 
     wstrPtr->length = length;
     wstrPtr->wcs = wcs;
