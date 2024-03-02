@@ -37,7 +37,7 @@ struct MkList {
     ulong capacity;
     ulong growCount;
     ulong elemSize;
-    byte * elems;
+    void * elems;
 };
 
 // Initialize a list.
@@ -52,7 +52,7 @@ bool MkListSetCapacity(MkList * listPtr, ulong capacity);
 
 // Insert a number of new element slots at the given index, shifting the successive elements. Pass ULONG_MAX as the index to append the new elements at the end of the list.
 // Returns a pointer to the first new element slot or NULL on memory allocation failure.
-byte * MkListInsert(MkList * listPtr, ulong index, ulong count);
+void * MkListInsert(MkList * listPtr, ulong index, ulong count);
 
 // Check if a list is valid. Will only perform in debug builds.
 static void MkListAssert(MkList * listPtr) {
@@ -64,10 +64,10 @@ static void MkListAssert(MkList * listPtr) {
 }
 
 // Get a pointer the the element slot at the given index.
-static byte * MkListGet(MkList * listPtr, ulong index) {
+static void * MkListGet(MkList * listPtr, ulong index) {
     MkListAssert(listPtr);
     assert(index < listPtr->count);
-    return listPtr->elems + (index * listPtr->elemSize);
+    return static_cast<byte *>(listPtr->elems) + (index * listPtr->elemSize);
 }
 
 #endif

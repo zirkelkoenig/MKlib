@@ -25,9 +25,11 @@ SOFTWARE.
 #if !defined(_MKLIB_STRING_H)
 #define _MKLIB_STRING_H
 
-#include "MkList.h"
+#include <assert.h>
+#include <stdlib.h>
 
 typedef unsigned char byte;
+typedef unsigned short ushort;
 typedef unsigned long ulong;
 
 
@@ -37,6 +39,10 @@ typedef unsigned long ulong;
 // Return a pointer to the first occurrence of a given character in a string.
 // Returns NULL if the character was not found.
 wchar_t * MkWcsFindChar(wchar_t * wcs, ulong length, wchar_t wc);
+
+// Return a pointer to the first occurrence of a given character in a string.
+// Returns NULL if the character was not found.
+const wchar_t * MkWcsFindCharConst(const wchar_t * wcs, ulong length, wchar_t wc);
 
 // Return the index of the first occurrence of any of the given characters.
 // Returns ULONG_MAX if none of the characters were found.
@@ -75,20 +81,24 @@ bool MkWstrsAreEqual(const MkWstr * a, const MkWstr * b);
 //----------------
 // UTF-8 FUNCTIONS
 
-// Read the UTF-8 input stream and append the resulting wide chars to the output list.
-// Returns FALSE on memory allocation failure.
-bool MkReadUtf8Stream(const byte * input, ulong inputSize, MkList * output);
+// Reads a number of elements from a stream and puts them into a buffer.
+// Returns FALSE on failure and sets a status variable.
+typedef bool (*MkStreamRead)(void * stream, void * buffer, ulong count, void * status);
 
-// Read the UTF-8 input stream and append the resulting lines of wide chars to the output list.
-// Returns FALSE on memory allocation failure.
-bool MkReadUtf8StreamToLines(const byte * input, ulong inputSize, MkList * outputLines);
+// Takes a number of elements from a buffer and writes them to a stream.
+// Returns FALSE on failure and sets a status variable.
+typedef bool (*MkStreamWrite)(void * stream, const void * buffer, ulong count, void * status);
 
-// Write bytes to a stream.
-// Returns FALSE on failure and sets the status variable.
-typedef bool (*MkByteStreamWriteCallback)(void * stream, const byte * input, ulong inputCount, void * status);
+// Reads a stream of UTF-8 bytes and writes them to a wide char stream.
+// Returns FALSE if a write operation failed.
+bool MkUtf8Read(
+    MkStreamRead readBytesCallback, void * byteStream, void * readStatus,
+    MkStreamWrite writeCharsCallback, void * charStream, void * writeStatus);
 
-// Write wide chars to a UTF-8 stream. Stops when encountering a NULL-terminator.
-// Returns FALSE on output error.
-bool MkWriteUtf8Stream(MkByteStreamWriteCallback writeCallback, void * stream, void * status, const wchar_t * str, ulong strLength, bool toCrlf);
+// Writes a wide char string to a UTF-8 byte stream. Stops when encountering a NULL char.
+// Returns FALSE if a write operation failed.
+bool MkUtf8WriteWcs(
+    const wchar_t * wcs, ulong count, bool toCrlf,
+    MkStreamWrite writeBytesCallback, void * byteStream, void * writeStatus);
 
 #endif

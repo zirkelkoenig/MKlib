@@ -63,7 +63,7 @@ bool MkListSetCapacity(MkList * listPtr, ulong capacity) {
     return true;
 }
 
-byte * MkListInsert(MkList * listPtr, ulong index, ulong count) {
+void * MkListInsert(MkList * listPtr, ulong index, ulong count) {
     MkListAssert(listPtr);
     assert(index < listPtr->count || index == ULONG_MAX);
 
@@ -82,8 +82,9 @@ byte * MkListInsert(MkList * listPtr, ulong index, ulong count) {
 
     ulong offset = count * listPtr->elemSize;
     ulong end = (index + count) * listPtr->elemSize;
+    byte * bytes = static_cast<byte *>(listPtr->elems);
     for (ulong i = listPtr->count * listPtr->elemSize - 1; i >= end; i--) {
-        listPtr->elems[i] = listPtr->elems[i - offset];
+        bytes[i] = bytes[i - offset];
     }
 
     return MkListGet(listPtr, index);

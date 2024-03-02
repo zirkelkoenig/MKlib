@@ -22,287 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <stdlib.h>
-
 #include "MkString.h"
-
-enum ReadResult {
-    READ_NEWLINE,
-    READ_EOF,
-    READ_MEMORY_ERROR,
-};
-
-static ReadResult ReadUtf8StreamLine(const byte * input, ulong inputSize, MkList * output, bool * lastWasCr, ulong * bytesRead) {
-    const bool smallWc = sizeof(wchar_t) < 4;
-
-    auto TryAppendWc = [&output](wchar_t wc) {
-        if (output->count == output->capacity) {
-            if (!MkListSetCapacity(output, 2 * output->capacity)) {
-                return false;
-            }
-        }
-        wchar_t * wcElem = (wchar_t *)MkListInsert(output, ULONG_MAX, 1);
-        *wcElem = wc;
-        return true;
-    };
-
-    enum State {
-        STATE_BEGIN,
-        STATE_READ_1,
-        STATE_READ_2,
-        STATE_READ_3,
-        STATE_READ_ERROR,
-        STATE_END_SUCCESS,
-        STATE_END_ERROR,
-    };
-
-    State state = STATE_BEGIN;
-    ulong uc;
-    ulong i = 0;
-
-    while (i != inputSize || state == STATE_END_SUCCESS || state == STATE_END_ERROR) {
-        switch (state) {
-            case STATE_BEGIN:
-            {
-                if ((input[i] & 0b10000000) == 0b00000000) {
-                    uc = input[i] & 0b01111111;
-                    state = STATE_END_SUCCESS;
-                } else if ((input[i] & 0b11000000) == 0b10000000) {
-                    i++;
-                    state = STATE_READ_ERROR;
-                } else if ((input[i] & 0b11100000) == 0b11000000) {
-                    uc = (input[i] & 0b00011111) << 6;
-                    i++;
-                    state = STATE_READ_1;
-                } else if ((input[i] & 0b11110000) == 0b11100000) {
-                    uc = (input[i] & 0b00001111) << 12;
-                    i++;
-                    state = STATE_READ_2;
-                } else if ((input[i] & 0b11111000) == 0b11110000) {
-                    uc = (input[i] & 0b00000111) << 18;
-                    i++;
-                    state = STATE_READ_3;
-                } else {
-                    i++;
-                    state = STATE_READ_ERROR;
-                }
-                break;
-            }
-
-            case STATE_READ_1:
-            {
-                if ((input[i] & 0b11000000) == 0b10000000) {
-                    uc += input[i] & 0b00111111;
-                    state = STATE_END_SUCCESS;
-                } else {
-                    state = STATE_END_ERROR;
-                }
-                break;
-            }
-
-            case STATE_READ_2:
-            {
-                if ((input[i] & 0b11000000) == 0b10000000) {
-                    uc += (input[i] & 0b00111111) << 6;
-                    i++;
-                    state = STATE_READ_1;
-                } else {
-                    state = STATE_END_ERROR;
-                }
-                break;
-            }
-
-            case STATE_READ_3:
-            {
-                if ((input[i] & 0b11000000) == 0b10000000) {
-                    uc += (input[i] & 0b00111111) << 12;
-                    i++;
-                    state = STATE_READ_2;
-                } else {
-                    state = STATE_END_ERROR;
-                }
-            }
-
-            case STATE_READ_ERROR:
-            {
-                if ((input[i] & 0b11000000) == 0b10000000) {
-                    i++;
-                } else {
-                    state = STATE_END_ERROR;
-                }
-                break;
-            }
-
-            case STATE_END_SUCCESS:
-            {
-                if (uc > 0xffff) {
-                    *lastWasCr = false;
-                    if (smallWc) {
-                        if (!TryAppendWc(0xfffd)) return READ_MEMORY_ERROR;
-                    } else {
-                        if (!TryAppendWc((wchar_t)uc)) return READ_MEMORY_ERROR;
-                    }
-                    i++;
-                } else {
-                    wchar_t wc = (wchar_t)uc;
-                    i++;
-
-                    if (wc == L'\n') {
-                        if (*lastWasCr) {
-                            *lastWasCr = false;
-                        } else {
-                            if (!TryAppendWc(wc)) return READ_MEMORY_ERROR;
-                            *bytesRead = i;
-                            return READ_NEWLINE;
-                        }
-                    } else if (wc == L'\r') {
-                        *lastWasCr = true;
-                        if (!TryAppendWc(L'\n')) return READ_MEMORY_ERROR;
-                        *bytesRead = i;
-                        return READ_NEWLINE;
-                    } else {
-                        *lastWasCr = false;
-                        if (!TryAppendWc(wc)) return READ_MEMORY_ERROR;
-                    }
-                }
-
-                state = STATE_BEGIN;
-                break;
-            }
-
-            case STATE_END_ERROR:
-            {
-                if (!TryAppendWc(0xfffd)) return READ_MEMORY_ERROR;
-                i++;
-                state = STATE_BEGIN;
-                break;
-            }
-        }
-    }
-
-    if (state != STATE_BEGIN) {
-        if (!TryAppendWc(0xfffd)) return READ_MEMORY_ERROR;
-    }
-
-    *bytesRead = i;
-    return READ_EOF;
-}
-
-bool MkReadUtf8Stream(const byte * input, ulong inputSize, MkList * output) {
-    assert(input || inputSize == 0);
-    MkListAssert(output);
-    assert(output->elemSize == sizeof(wchar_t));
-
-    ulong targetCapacity = (((output->count + inputSize) / output->growCount) + 1) * output->growCount;
-    if (output->capacity < targetCapacity) {
-        if (!MkListSetCapacity(output, targetCapacity)) return false;
-    }
-
-    ReadResult readResult;
-    bool lastWasCr = false;
-    ulong bytesRead;
-    ulong i = 0;
-    do {
-        readResult = ReadUtf8StreamLine(input + i, inputSize - i, output, &lastWasCr, &bytesRead);
-        i += bytesRead;
-    } while (readResult == READ_NEWLINE);
-
-    return true;
-}
-
-bool MkReadUtf8StreamToLines(const byte * input, ulong inputSize, MkList * outputLines) {
-    assert(input || inputSize == 0);
-    MkListAssert(outputLines);
-    assert(outputLines->elemSize == sizeof(MkList));
-
-    ReadResult readResult;
-    bool lastWasCr = false;
-    ulong bytesRead;
-    ulong i = 0;
-    do {
-        MkList * outputLinePtr = (MkList *)MkListInsert(outputLines, ULONG_MAX, 1);
-        if (!outputLinePtr) {
-            return false;
-        }
-        MkListInit(outputLinePtr, 16, sizeof(wchar_t));
-        readResult = ReadUtf8StreamLine(input + i, inputSize - i, outputLinePtr, &lastWasCr, &bytesRead);
-        if (readResult == READ_NEWLINE) {
-            outputLinePtr->count--;
-        }
-        i += bytesRead;
-    } while (readResult == READ_NEWLINE);
-
-    if (readResult == READ_MEMORY_ERROR) {
-        return false;
-    } else {
-        return true;
-    }
-}
-
-bool MkWriteUtf8Stream(MkByteStreamWriteCallback writeCallback, void * stream, void * status, const wchar_t * str, ulong strLength, bool toCrlf) {
-    assert(writeCallback);
-    assert(stream);
-    assert(status);
-    assert(str || strLength == 0);
-
-    byte crlf[2] = { 0x0d, 0x0a };
-    byte * newlineOutput;
-    ulong newlineCount;
-    if (toCrlf) {
-        newlineOutput = crlf;
-        newlineCount = 2;
-    } else {
-        newlineOutput = crlf + 1;
-        newlineCount = 1;
-    }
-
-    byte output[4];
-    ulong outputCount;
-
-    for (ulong i = 0; i != strLength; i++) {
-        wchar_t wc = str[i];
-
-        if (wc == L'\0') {
-            return true;
-        }
-
-        if (wc == L'\n') {
-            if (!writeCallback(stream, newlineOutput, newlineCount, status)) return false;
-        } else {
-            ulong uc = (ulong)wc;
-
-            if (uc <= 0x007f) {
-                output[0] = (byte)uc;
-                outputCount = 1;
-            } else if (uc <= 0x07ff) {
-                output[0] = (byte)((uc >> 6) + 0b11000000);
-                output[1] = (byte)((uc & 0b00111111) + 0b10000000);
-                outputCount = 2;
-            } else if (uc <= 0xffff) {
-                output[0] = (byte)((uc >> 12) + 0b11100000);
-                output[1] = (byte)((uc >> 6 & 0b00111111) + 0b10000000);
-                output[2] = (byte)((uc & 0b00111111) + 0b10000000);
-                outputCount = 3;
-            } else if (uc <= 0x0010ffff) {
-                output[0] = (byte)((uc >> 18) + 0b11110000);
-                output[1] = (byte)((uc >> 12 & 0b00111111) + 0b10000000);
-                output[2] = (byte)((uc >> 6 & 0b00111111) + 0b10000000);
-                output[3] = (byte)((uc & 0b00111111) + 0b10000000);
-                outputCount = 4;
-            } else {
-                // 0xFFFD
-                output[0] = 0b11101111;
-                output[1] = 0b10111111;
-                output[2] = 0b10111101;
-                outputCount = 3;
-            }
-
-            if (!writeCallback(stream, output, outputCount, status)) return false;
-        }
-    }
-
-    return true;
-}
 
 bool MkWstrsAreEqual(const MkWstr * a, const MkWstr * b) {
     assert(a);
@@ -323,6 +43,17 @@ bool MkWstrsAreEqual(const MkWstr * a, const MkWstr * b) {
 }
 
 wchar_t * MkWcsFindChar(wchar_t * wcs, ulong length, wchar_t wc) {
+    assert(wcs);
+
+    for (ulong i = 0; i != length; i++) {
+        if (wcs[i] == wc) {
+            return wcs + i;
+        }
+    }
+    return nullptr;
+}
+
+const wchar_t * MkWcsFindCharConst(const wchar_t * wcs, ulong length, wchar_t wc) {
     assert(wcs);
 
     for (ulong i = 0; i != length; i++) {
@@ -397,4 +128,226 @@ bool MkWcsIsPrefix(const wchar_t * wcs, ulong length, const wchar_t * prefix) {
     } else {
         return false;
     }
+}
+
+bool MkUtf8Read(
+    MkStreamRead readBytesCallback, void * byteStream, void * readStatus,
+    MkStreamWrite writeCharsCallback, void * charStream, void * writeStatus)
+{
+    assert(readBytesCallback);
+    assert(byteStream);
+    assert(writeCharsCallback);
+    assert(charStream);
+
+    enum State {
+        STATE_BEGIN,
+        STATE_READ_1,
+        STATE_READ_2,
+        STATE_READ_3,
+        STATE_READ_ERROR,
+        STATE_END_SUCCESS,
+        STATE_END_ERROR,
+    };
+
+    bool smallChars = sizeof(wchar_t) < 4;
+
+    unsigned char curByte;
+    ulong uc;
+    State state = STATE_BEGIN;
+    bool readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+    bool lastWasCr = false;
+
+    while (readSuccess || state == STATE_END_SUCCESS || state == STATE_END_ERROR) {
+        switch (state) {
+            case STATE_BEGIN:
+            {
+                if ((curByte & 0b10000000) == 0b00000000) {
+                    uc = curByte & 0b01111111;
+                    state = STATE_END_SUCCESS;
+                } else if ((curByte & 0b11000000) == 0b10000000) {
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                    state = STATE_READ_ERROR;
+                } else if ((curByte & 0b11100000) == 0b11000000) {
+                    uc = (curByte & 0b00011111) << 6;
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                    state = STATE_READ_1;
+                } else if ((curByte & 0b11110000) == 0b11100000) {
+                    uc = (curByte & 0b00001111) << 12;
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                    state = STATE_READ_2;
+                } else if ((curByte & 0b11111000) == 0b11110000) {
+                    uc = (curByte & 0b00000111) << 18;
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                    state = STATE_READ_3;
+                } else {
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                    state = STATE_READ_ERROR;
+                }
+                break;
+            }
+
+            case STATE_READ_1:
+            {
+                if ((curByte & 0b11000000) == 0b10000000) {
+                    uc += curByte & 0b00111111;
+                    state = STATE_END_SUCCESS;
+                } else {
+                    state = STATE_END_ERROR;
+                }
+                break;
+            }
+
+            case STATE_READ_2:
+            {
+                if ((curByte & 0b11000000) == 0b10000000) {
+                    uc += (curByte & 0b00111111) << 6;
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                    state = STATE_READ_1;
+                } else {
+                    state = STATE_END_ERROR;
+                }
+                break;
+            }
+
+            case STATE_READ_3:
+            {
+                if ((curByte & 0b11000000) == 0b10000000) {
+                    uc += (curByte & 0b00111111) << 12;
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                    state = STATE_READ_2;
+                } else {
+                    state = STATE_END_ERROR;
+                }
+            }
+
+            case STATE_READ_ERROR:
+            {
+                if ((curByte & 0b11000000) == 0b10000000) {
+                    readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                } else {
+                    state = STATE_END_ERROR;
+                }
+                break;
+            }
+
+            case STATE_END_SUCCESS:
+            {
+                readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                state = STATE_BEGIN;
+
+                wchar_t c;
+                if (uc > 0xffff && smallChars) {
+                    c = 0xfffd;
+                } else {
+                    c = static_cast<wchar_t>(uc);
+                }
+
+                if (c == L'\r') {
+                    lastWasCr = true;
+                    c = L'\n';
+                } else if (c == L'\n') {
+                    if (lastWasCr) {
+                        lastWasCr = false;
+                        break;
+                    }
+                } else {
+                    lastWasCr = false;
+                }
+
+                if (!writeCharsCallback(charStream, &c, 1, writeStatus)) {
+                    return false;
+                }
+                break;
+            }
+
+            case STATE_END_ERROR:
+            {
+                readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
+                state = STATE_BEGIN;
+
+                wchar_t c = 0xfffd;
+                if (!writeCharsCallback(charStream, &c, 1, writeStatus)) {
+                    return false;
+                }
+                break;
+            }
+        }
+    }
+
+    if (state != STATE_BEGIN) {
+        wchar_t c = 0xfffd;
+        if (!writeCharsCallback(charStream, &c, 1, writeStatus)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool MkUtf8WriteWcs(
+    const wchar_t * wcs, ulong count, bool toCrlf,
+    MkStreamWrite writeBytesCallback, void * byteStream, void * writeStatus)
+{
+    assert(wcs || count == 0);
+    assert(writeBytesCallback);
+    assert(byteStream);
+
+    byte newlineBytes[] = { 0x0d, 0x0a };
+    byte * newlineBuffer;
+    ulong newlineCount;
+    if (toCrlf) {
+        newlineBuffer = newlineBytes;
+        newlineCount = 2;
+    } else {
+        newlineBuffer = &newlineBytes[1];
+        newlineCount = 1;
+    }
+
+    for (ulong i = 0; i != count; i++) {
+        if (wcs[i] == L'\0') {
+            break;
+        }
+
+        if (wcs[i] == L'\n') {
+            if (!writeBytesCallback(byteStream, newlineBuffer, newlineCount, writeStatus)) {
+                return false;
+            }
+        } else {
+            ulong uc = static_cast<ulong>(wcs[i]);
+            byte output[4];
+            ulong outputCount;
+
+            if (uc <= 0x007f) {
+                output[0] = (byte)uc;
+                outputCount = 1;
+            } else if (uc <= 0x07ff) {
+                output[0] = (byte)((uc >> 6) + 0b11000000);
+                output[1] = (byte)((uc & 0b00111111) + 0b10000000);
+                outputCount = 2;
+            } else if (uc <= 0xffff) {
+                output[0] = (byte)((uc >> 12) + 0b11100000);
+                output[1] = (byte)((uc >> 6 & 0b00111111) + 0b10000000);
+                output[2] = (byte)((uc & 0b00111111) + 0b10000000);
+                outputCount = 3;
+            } else if (uc <= 0x0010ffff) {
+                output[0] = (byte)((uc >> 18) + 0b11110000);
+                output[1] = (byte)((uc >> 12 & 0b00111111) + 0b10000000);
+                output[2] = (byte)((uc >> 6 & 0b00111111) + 0b10000000);
+                output[3] = (byte)((uc & 0b00111111) + 0b10000000);
+                outputCount = 4;
+            } else {
+                // 0xFFFD
+                output[0] = 0b11101111;
+                output[1] = 0b10111111;
+                output[2] = 0b10111101;
+                outputCount = 3;
+            }
+
+            if (!writeBytesCallback(byteStream, output, outputCount, writeStatus)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
