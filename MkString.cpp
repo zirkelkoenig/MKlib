@@ -24,110 +24,122 @@ SOFTWARE.
 
 #include "MkString.h"
 
-bool MkWstrsAreEqual(const MkWstr * a, const MkWstr * b) {
-    assert(a);
-    assert(a->wcs);
-    assert(b);
-    assert(b->wcs);
-
-    if (a->length != b->length) {
-        return false;
+size_t MkWcsFindCharIndex(const wchar_t * wcs, size_t wcsMax, wchar_t c) {
+    if (!wcs) {
+        return SIZE_MAX;
     }
 
-    for (ulong i = 0; i != a->length; i++) {
-        if (a->wcs[i] != b->wcs[i]) {
-            return false;
+    for (size_t i = 0; i != wcsMax; i++) {
+        if (wcs[i] == c) {
+            return i;
+        }
+        if (wcs[i] == L'\0') {
+            return SIZE_MAX;
         }
     }
-    return true;
+    return SIZE_MAX;
 }
 
-wchar_t * MkWcsFindChar(wchar_t * wcs, ulong length, wchar_t wc) {
-    assert(wcs);
+size_t MkWcsFindCharsIndex(const wchar_t * wcs, size_t wcsMax, const wchar_t * chars, size_t count) {
+    assert(chars || count == 0);
 
-    for (ulong i = 0; i != length; i++) {
-        if (wcs[i] == wc) {
-            return wcs + i;
-        }
+    if (!wcs) {
+        return SIZE_MAX;
     }
-    return nullptr;
-}
 
-const wchar_t * MkWcsFindCharConst(const wchar_t * wcs, ulong length, wchar_t wc) {
-    assert(wcs);
-
-    for (ulong i = 0; i != length; i++) {
-        if (wcs[i] == wc) {
-            return wcs + i;
-        }
-    }
-    return nullptr;
-}
-
-ulong MkWcsFindCharsIndex(const wchar_t * wcs, ulong length, const wchar_t * chars, ulong count) {
-    assert(wcs);
-    assert(chars);
-
-    for (ulong i = 0; i != length; i++) {
-        for (ulong j = 0; j != count; j++) {
+    for (size_t i = 0; i != wcsMax; i++) {
+        for (size_t j = 0; j != count; j++) {
             if (wcs[i] == chars[j]) {
                 return i;
             }
         }
+        if (wcs[i] == L'\0') {
+            return SIZE_MAX;
+        }
     }
-    return ULONG_MAX;
+    return SIZE_MAX;
 }
 
-ulong MkWcsFindSubstringIndex(const wchar_t * wcs, ulong length, const wchar_t * substring) {
-    assert(wcs);
-    assert(substring);
+size_t MkWcsFindSubstrIndex(const wchar_t * wcs, size_t wcsMax, const wchar_t * substr) {
+    if (!wcs || wcsMax == 0) {
+        return SIZE_MAX;
+    }
+    size_t actualLength = wcsnlen_s(wcs, wcsMax);
+    if (actualLength == 0) {
+        return SIZE_MAX;
+    }
 
-    ulong substringLength = 0;
-    while (substring[substringLength] != L'\0') {
-        substringLength++;
-    }
-    if (substringLength > length) {
-        return ULONG_MAX;
-    }
-    if (substringLength == 0) {
+    if (!substr) {
         return 0;
     }
+    size_t substrLength = wcslen(substr);
+    if (substrLength == 0) {
+        return 0;
+    }
+    if (substrLength > actualLength) {
+        return SIZE_MAX;
+    }
 
-    ulong end = length - substringLength;
-    for (ulong i = 0; i != end; i++) {
-        bool found = true;
-        for (ulong j = 0; j != substringLength; j++) {
-            if (wcs[i + j] != substring[j]) {
-                found = false;
+    size_t end = actualLength - substrLength + 1;
+    for (size_t i = 0; i != end; i++) {
+        bool match = true;
+        for (size_t j = 0; j != substrLength; j++) {
+            if (wcs[i + j] != substr[j]) {
+                match = false;
                 break;
             }
         }
-        if (found) {
+        if (match) {
             return i;
         }
     }
-    return ULONG_MAX;
+    return SIZE_MAX;
 }
 
-bool MkWcsIsPrefix(const wchar_t * wcs, ulong length, const wchar_t * prefix) {
-    assert(wcs);
-    assert(prefix);
+bool MkWcsIsPrefix(const wchar_t * wcs, size_t wcsMax, const wchar_t * prefix) {
+    if (!prefix) {
+        return true;
+    }
+    if (!wcs) {
+        return prefix[0] == L'\0';
+    }
 
-    ulong i = 0;
-    while (i != length) {
-        if (prefix[i] == L'\0') {
+    for (size_t i = 0; i != wcsMax; i++) {
+        if (wcs[i] != prefix[i]) {
+            return prefix[i] == L'\0';
+        }
+        if (wcs[i] == L'\0') {
             return true;
         }
-        if (wcs[i] != prefix[i]) {
-            return false;
-        }
-        i++;
     }
-    if (prefix[i] == L'\0') {
-        return true;
-    } else {
+    return prefix[wcsMax] == L'\0';
+}
+
+bool MkWcsAreEqual(const wchar_t * a, size_t aMax, const wchar_t * b, size_t bMax) {
+    if (aMax != bMax) {
         return false;
     }
+
+    if (!a) {
+        if (!b) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if (!b) {
+        return false;
+    }
+
+    for (size_t i = 0; i != aMax; i++) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+        if (a[i] == L'\0') {
+            return true;
+        }
+    }
+    return true;
 }
 
 bool MkUtf8Read(
@@ -151,7 +163,7 @@ bool MkUtf8Read(
 
     bool smallChars = sizeof(wchar_t) < 4;
 
-    unsigned char curByte;
+    byte curByte;
     ulong uc;
     State state = STATE_BEGIN;
     bool readSuccess = readBytesCallback(byteStream, &curByte, 1, readStatus);
@@ -285,12 +297,15 @@ bool MkUtf8Read(
 }
 
 bool MkUtf8WriteWcs(
-    const wchar_t * wcs, ulong count, bool toCrlf,
+    const wchar_t * wcs, size_t wcsMax, bool toCrlf,
     MkStreamWrite writeBytesCallback, void * byteStream, void * writeStatus)
 {
-    assert(wcs || count == 0);
     assert(writeBytesCallback);
     assert(byteStream);
+
+    if (!wcs) {
+        return true;
+    }
 
     byte newlineBytes[] = { 0x0d, 0x0a };
     byte * newlineBuffer;
@@ -303,7 +318,7 @@ bool MkUtf8WriteWcs(
         newlineCount = 1;
     }
 
-    for (ulong i = 0; i != count; i++) {
+    for (size_t i = 0; i != wcsMax; i++) {
         if (wcs[i] == L'\0') {
             break;
         }

@@ -26,59 +26,54 @@ SOFTWARE.
 #define _MKLIB_STRING_H
 
 #include <assert.h>
-#include <stdlib.h>
+#include <stdint.h>
+#include <wchar.h>
 
 typedef unsigned char byte;
+typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef unsigned long ulong;
 
-
-//---------------------
+//-----------------------
 // C STRING FUNCTIONS
 
-// Return a pointer to the first occurrence of a given character in a string.
-// Returns NULL if the character was not found.
-wchar_t * MkWcsFindChar(wchar_t * wcs, ulong length, wchar_t wc);
+// Finds the first occurrence of the given character in a string and returns its index.
+// Returns SIZE_MAX if the character is not in the string.
+size_t MkWcsFindCharIndex(const wchar_t * wcs, size_t wcsMax, wchar_t c);
 
-// Return a pointer to the first occurrence of a given character in a string.
-// Returns NULL if the character was not found.
-const wchar_t * MkWcsFindCharConst(const wchar_t * wcs, ulong length, wchar_t wc);
+// Finds the first occurrence of one of the given characters in a string and returns the index.
+// Returns SIZE_MAX if none of the characters are in the string.
+size_t MkWcsFindCharsIndex(const wchar_t * wcs, size_t wcsMax, const wchar_t * chars, size_t count);
 
-// Return the index of the first occurrence of any of the given characters.
-// Returns ULONG_MAX if none of the characters were found.
-ulong MkWcsFindCharsIndex(const wchar_t * wcs, ulong length, const wchar_t * chars, ulong count);
+// Finds the first occurrence of the given NULL-terminated substring in another string and returns its index.
+// Returns SIZE_MAX if the substring was not found.
+size_t MkWcsFindSubstrIndex(const wchar_t * wcs, size_t wcsMax, const wchar_t * substr);
 
-// Return the index of the first occurrence of a given NULL-terminated substring.
-// Returns ULONG_MAX if the substring was not found.
-ulong MkWcsFindSubstringIndex(const wchar_t * wcs, ulong length, const wchar_t * substring);
+// Checks whether a NULL-terminated string is the prefix of another string.
+bool MkWcsIsPrefix(const wchar_t * wcs, size_t wcsMax, const wchar_t * prefix);
 
-// Check whether a string starts with the given NULL-terminated prefix.
-bool MkWcsIsPrefix(const wchar_t * wcs, ulong length, const wchar_t * prefix);
+// Checks whether two strings are equal.
+bool MkWcsAreEqual(const wchar_t * a, size_t aMax, const wchar_t * b, size_t bMax);
 
+//---------------
+// STRING REF
 
-//----------------
-// SAFE STRING
-
-// A safe string type.
+// a string reference type
 struct MkWstr {
-    ulong length;
-    wchar_t * wcs;
+    size_t length;
+    const wchar_t * wcs;
 };
 
-// Set a safe string to refer to another string.
-static void MkWstrSet(MkWstr * wstrPtr, wchar_t * wcs, ulong length) {
-    assert(wstrPtr);
+// Sets up a string reference.
+static void MkWstrSet(MkWstr * strRef, const wchar_t * wcs, size_t length) {
+    assert(strRef);
     assert(wcs || length == 0);
 
-    wstrPtr->length = length;
-    wstrPtr->wcs = wcs;
+    strRef->length = length;
+    strRef->wcs = wcs;
 }
 
-// Check whether two safe strings are equal.
-bool MkWstrsAreEqual(const MkWstr * a, const MkWstr * b);
-
-
-//----------------
+//-----------------
 // UTF-8 FUNCTIONS
 
 // Reads a number of elements from a stream and puts them into a buffer.
@@ -98,7 +93,7 @@ bool MkUtf8Read(
 // Writes a wide char string to a UTF-8 byte stream. Stops when encountering a NULL char.
 // Returns FALSE if a write operation failed.
 bool MkUtf8WriteWcs(
-    const wchar_t * wcs, ulong count, bool toCrlf,
+    const wchar_t * wcs, size_t wcsMax, bool toCrlf,
     MkStreamWrite writeBytesCallback, void * byteStream, void * writeStatus);
 
 #endif

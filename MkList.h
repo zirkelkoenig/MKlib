@@ -26,33 +26,24 @@ SOFTWARE.
 #define _MKLIB_LIST_H
 
 #include <assert.h>
-#include <limits.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-//typedef unsigned char byte;
-typedef unsigned int uint;
-typedef unsigned short ushort;
-typedef unsigned long ulong;
-
-// A dynamic array.
+// a dynamic array
 template<class T>
-struct MkList2 {
-    ulong count; // the current number of elements in the array
-    ulong capacity; // the current array capacity
-    ulong growCount; // the number of element slots to add when expanding the array
+struct MkList {
+    size_t count; // the current number of elements
+    size_t capacity; // the current number of available element slots
+    size_t growCount; // the number of element slots to add when expanding the array
     T * elems; // the actual element slots
 
-    // Initialize the array.
-    MkList2(ulong growCount) {
-        Init(growCount);
-    }
-
-    // Initialize the array.
-    void Init(ulong growCount) {
-        assert(growCount != 0);
+    // Initializes the array.
+    void Init(size_t newGrowCount) {
+        assert(newGrowCount != 0);
 
         count = 0;
         capacity = 0;
-        this->growCount = growCount;
+        growCount = newGrowCount;
         elems = nullptr;
     }
 
@@ -62,7 +53,7 @@ struct MkList2 {
         assert(elems || capacity == 0);
     }
 
-    // Clear the array, freeing all its allocated memory.
+    // Clears the array, freeing all allocated memory.
     void Clear() {
         Assert();
 
@@ -70,18 +61,20 @@ struct MkList2 {
         capacity = 0;
         if (elems) {
             free(elems);
+            elems = nullptr;
         }
     }
 
-    // Explicitly set the array capacity.
+    // Explicitly sets the number of element slots.
     // Returns FALSE on memory allocation failure.
-    bool SetCapacity(ulong newCapacity) {
+    bool SetCapacity(size_t newCapacity) {
         Assert();
 
         T * newElems = static_cast<T *>(realloc(elems, newCapacity * sizeof(T)));
         if (!(newElems || newCapacity == 0)) {
             return false;
         }
+
         if (count > newCapacity) {
             count = newCapacity;
         }
@@ -90,45 +83,45 @@ struct MkList2 {
         return true;
     }
 
-    // Create space for a number of new elements, shifting the successive elements.
-    // Pass ULONG_MAX as the index to append the new elements to the end of the array.
+    // Creates space for a given number of elements at the given index, shifting the existing successive elements.
+    // If the index is SIZE_MAX, the new space is created at the end of the array.
     // Returns a pointer to the first new element slot or NULL on memory allocation failure.
-    T * Insert(ulong index, ulong shiftCount) {
+    T * Insert(size_t index, size_t insertCount) {
         Assert();
-        assert(index <= count || index == ULONG_MAX);
+        assert(index <= count || index == SIZE_MAX);
 
-        ulong newCount = count + shiftCount;
+        size_t newCount = count + insertCount;
         if (newCount > capacity) {
-            ulong newCapacity = ((newCount / growCount) + 1) * growCount;
+            size_t newCapacity = ((newCount / growCount) + 1) * growCount;
             if (!SetCapacity(newCapacity)) {
                 return nullptr;
             }
         }
 
-        if (index == ULONG_MAX) {
+        if (index == SIZE_MAX) {
             index = count;
         }
         count = newCount;
 
-        ulong shiftEnd = index + shiftCount;
-        for (ulong i = count - 1; i >= shiftEnd; i--) {
-            elems[i] = elems[i - shiftCount];
+        size_t shiftEnd = index + insertCount - 1;
+        for (size_t i = count - 1; i != shiftEnd; i--) {
+            elems[i] = elems[i - insertCount];
         }
 
         return &elems[index];
     }
 
-    // Remove elements from the array, unshifting the successive elements.
-    void Remove(ulong index, ulong unshiftCount) {
+    // Removes a given number of elements from the given index, unshifting the successive elements.
+    void Remove(size_t index, size_t removeCount) {
         Assert();
         assert(index < count);
-        assert(unshiftCount <= count - index);
+        assert(removeCount <= count - index);
 
-        ulong shiftEnd = count - unshiftCount;
-        for (ulong i = index; i != shiftEnd; i++) {
-            elems[i] = elems[i + unshiftCount];
+        size_t shiftEnd = count - removeCount;
+        for (size_t i = index; i != shiftEnd; i++) {
+            elems[i] = elems[i + removeCount];
         }
-        count -= unshiftCount;
+        count -= removeCount;
     }
 };
 
