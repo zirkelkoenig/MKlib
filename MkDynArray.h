@@ -29,15 +29,15 @@ SOFTWARE.
 #include <stdint.h>
 #include <stdlib.h>
 
-// a dynamic array
+// A simple dynamic array.
 template<class T>
-struct MkList {
+struct MkDynArray {
     size_t count; // the current number of elements
     size_t capacity; // the current number of available element slots
     size_t growCount; // the number of element slots to add when expanding the array
     T * elems; // the actual element slots
 
-    // Initializes the array.
+    // Initialize the array.
     void Init(size_t newGrowCount) {
         assert(newGrowCount != 0);
 
@@ -53,7 +53,7 @@ struct MkList {
         assert(elems || capacity == 0);
     }
 
-    // Clears the array, freeing all allocated memory.
+    // Clear the array, freeing all allocated memory.
     void Clear() {
         Assert();
 
@@ -65,7 +65,7 @@ struct MkList {
         }
     }
 
-    // Explicitly sets the number of element slots.
+    // Explicitly set the number of element slots.
     // Returns FALSE on memory allocation failure.
     bool SetCapacity(size_t newCapacity) {
         Assert();
@@ -83,7 +83,7 @@ struct MkList {
         return true;
     }
 
-    // Creates space for a given number of elements at the given index, shifting the existing successive elements.
+    // Create space for a given number of elements at the given index, shifting the existing successive elements.
     // If the index is SIZE_MAX, the new space is created at the end of the array.
     // Returns a pointer to the first new element slot or NULL on memory allocation failure.
     T * Insert(size_t index, size_t insertCount) {
@@ -111,7 +111,7 @@ struct MkList {
         return &elems[index];
     }
 
-    // Removes a given number of elements from the given index, unshifting the successive elements.
+    // Remove a given number of elements from the given index, unshifting the successive elements.
     void Remove(size_t index, size_t removeCount) {
         Assert();
         assert(index < count);
